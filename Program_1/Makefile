@@ -1,3 +1,5 @@
+# EECE-446-FA-2024 | Nick Kaplan | Halin Gailey
+
 EXE = h1-counter
 CFLAGS = -Wall
 CXXFLAGS = -Wall
