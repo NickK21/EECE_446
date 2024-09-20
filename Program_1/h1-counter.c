@@ -8,22 +8,34 @@
 
 #define SERVER_PORT "80"
 
+// Function prototypes
 int lookup_and_connect(const char* host, const char* service);
+int sendall(int s, char* buf, int* len);
+int recvall(int s, char* buf, int* len);
+
 
 int main(int argc, char* argv[])
 {	
-	int sum = 0;
-    
-	printf("sum: %d\n", sum);
-	for (int i = 1; i < argc; i++)
-	{
-		sum = sum + atoi(argv[i]);
-	}
-	printf("sum: %d\n", sum);	
-	
-	char* buf = malloc(31);
-    int sockfd;
-	
+	// Buffer for receiving data
+	char buf[1024];
+	// Socket file descriptor
+	int sockfd;
+	// Chunk size for receiving data
+	int count = 0;
+
+	// Validate input arguments
+    if (argc == 2)
+    {
+		// Convert command-line argument to integer (chunk size)
+    	count = atoi(argv[1]);
+    }
+	else
+    {
+    	perror("Invalid Chunk Size, Try Again");
+		// Exit if no valid argument is provided
+    	exit(1);
+  	}
+
 	sockfd = lookup_and_connect("www.ecst.csuchico.edu", SERVER_PORT);
 	
 	if (sockfd < 0)
@@ -31,9 +43,12 @@ int main(int argc, char* argv[])
 		perror("Error connecting to the server\n");
 		exit(1);
 	}
-
+	 // HTTP GET request to fetch specific file from the server
 	char request[] = "GET /~kkredo/file.html HTTP/1.0\r\n\r\n";
-	int bytes_sent = send(sockfd, request, strlen(request), 0);
+
+
+  	int send_len = strlen(request);
+	int bytes_sent = sendall(sockfd, request, &send_len);
 	
 	if (bytes_sent < 0)
 	{
@@ -42,42 +57,87 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	long bytes = 0;
+	// Variables to track received bytes and count <h1> tags in the response
+	int bytes = 0;
 	int h1_tags = 0;
-	char* h1_start = buf;
+	int bytes_recv = 0;
+	// Pointer to chunk size
+  	int* len = &count;
 
-	while (bytes_sent != 0)
+	// Receive data from the server in chunks and count <h1> tags
+	while ((bytes_recv = recvall(sockfd, buf, len)) > 0)
 	{
-		//make sure recv can handle multiple receives
-		// n = recv(s, buf, sizeof(buf) - 1, 0);
-		int bytes_recv = recv(s, buf, 30, 0);
-		if (bytes_recv <= 0)
-		{
-			break;
-		}
+		// Null-terminate the received data for string operations
 		buf[bytes_recv] = '\0';
+		 // Pointer to traverse through the buffer
+	    char* h1_start = buf;
 		
 		while ((h1_start = strstr(h1_start, "<h1>")) != NULL)
 		{
 			h1_tags++;
-			//Probably need to change, make sure stays within bounds of buf
-			h1_start += 4;
+			// Move pointer past the current <h1> tag
+      		h1_start += strlen("<h1>");
 		}
 
-		bytes += n;
-	}
+		bytes += bytes_recv;
 
-
-	printf("Number of <h1> tags: %d\nNumber of bytes: %ld\n", h1_tags, bytes);
+		printf("Number of <h1> tags: %d\n", h1_tags);
 	
-	if (n < 0)
-	{
-		perror("Receive Failed");
+		printf("Number of bytes: %d\n", bytes);
+	
+		if (sockfd < 0)
+		{
+			perror("Receive Failed");
+		}
+
+		return 0;
 	}
+}
 
-	free(buf);
+int sendall(int s, char* buf, int* len)
+{
+	int total = 0;
+	int bytes_left = *len;
+	int n;
 
-	return 0;
+	while (total < *len)
+	{
+		n = send(s, buf + total, bytes_left, 0);
+		if (n == -1)
+		{
+			break;
+		}
+		// Update total bytes sent
+		total += n;
+		// Update remaining bytes
+		bytes_left -= n;
+	}
+	// Update len with total bytes sent
+	*len = total;
+
+	// Return -1 if sending failed, otherwise return 0
+	return n == -1 ? -1 : 0;
+}
+
+int recvall(int s, char* buf, int* len)
+{
+	int total = 0;
+	int bytes_left = *len;
+	int n;
+
+	while (total < *len)
+	{
+		n = recv(s, buf + total, bytes_left, 0);
+		if (n == -1 || n == -0)
+		{
+			break;
+		}
+		total += n;
+		bytes_left -= n;
+	}
+	*len = total;
+
+	return n == -1 ? -1 : total;	
 }
 int lookup_and_connect(const char* host, const char* service) 
 {
@@ -87,7 +147,7 @@ int lookup_and_connect(const char* host, const char* service)
 
 	/* Translate host name into peer's IP address */
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = 0;
 	hints.ai_protocol = 0;
@@ -121,6 +181,6 @@ int lookup_and_connect(const char* host, const char* service)
 	}
     freeaddrinfo(result);
 
-	return sockfd;
+	return s;
 }
 
