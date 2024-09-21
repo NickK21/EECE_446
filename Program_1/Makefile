@@ -18,8 +18,4 @@ all: $(EXE)
 # OR
 
 h1-counter: h1-counter.c
-	$(CC) $(CXXFLAGS) h1-counter.c $(LDLIBS) -o h1-counter
-
-.PHONY: clean
-clean:
-	rm -f $(EXE)
+	$(CC) $(CXXFLAGS) h1-counter.c $(LDLIBS) -

@@ -1,4 +1,4 @@
-/* EECE-446-FA-2024 | Nick Kaplan | Halin Gailey */
+/* EECE-446-FA-2024 | Nick Kaplan | Halin Gailey */ 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -179,10 +179,4 @@ int lookup_and_connect(const char* host, const char* service)
 	{
 		perror("stream-talk-client: connect");
         freeaddrinfo(result);
-		return -1;
-	}
-    freeaddrinfo(result);
-
-	return s;
-}
-
+		return 
