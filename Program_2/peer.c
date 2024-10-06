@@ -11,6 +11,7 @@
 #include <sys/_endian.h>
 #include <dirent.h>
 #include <stdint.h>
+
 #define MAX_BUFFER_SIZE 1024
 #define SERVER_PORT 5000
 
@@ -146,7 +147,7 @@ void search(int sockfd)
     unsigned char buf[MAX_BUFFER_SIZE];
     printf("Enter a file name: ");
     fgets(filename, MAX_BUFFER_SIZE, stdin);
-        filename[strcspn(filename, "\n")] = 0;
+    filename[strcspn(filename, "\n")] = 0;
 
     // Action code 
     buf[0] = 2;
@@ -168,7 +169,9 @@ void search(int sockfd)
         return;
     }
     // First 4 bytes of the response buffer are interpreted as the peer ID of the peer that holds the requested file.
-    uint32_t peer_id = ntohl(*(uint32_t*)&response[0]);
+    uint32_t peer_id;
+    memcpy(&peer_id, &response[0], sizeof(peer_id));
+    peer_id = ntohl(peer_id); 
     
     if (peer_id == 0)
     {
@@ -179,11 +182,14 @@ void search(int sockfd)
         // Extract IP address and port number of peer that holds the file
         char ip[INET_ADDRSTRLEN];
         // Stores of IP address of peer
-        uint32_t ip_addr = *(uint32_t*)&response[4];
+        uint32_t ip_addr;
         // Converts binary IP address into readable string, stores in ip
+        memcpy(&ip_addr, &response[4], sizeof(ip_addr));        
         inet_ntop(AF_INET, &ip_addr, ip, INET_ADDRSTRLEN);
         // Stores port number of peer
-        uint16_t port = ntohs(*(uint16_t*)&response[8]);
+        uint16_t port;
+        memcpy(&port, &response[8], sizeof(port));
+        port = ntohs(port);
 
         // Prints peer ID, IP address, and port number that hold requested file
         printf("File found at\n Peer %u\n", peer_id);
